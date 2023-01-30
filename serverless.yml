@@ -1,0 +1,76 @@
+service: goserverlesscrud
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, self:custom.defaultRegion}
+  environment:
+    ANIMALS_TABLE_NAME: ${self:custom.AnimalsTable.name}
+    ANIMALS_BUCKET_NAME: ${self:custom.AnimalsBucket.name}
+    STAGE: ${self:provider.stage}
+  iam:
+    role:
+      statements:
+        - ${file(iam/AnimalsTableIAM.yml):AnimalsTableIAM}
+        - ${file(iam/AnimalsBucketIAM.yml):AnimalsBucketIAM}
+ 
+package:
+  patterns:
+    - '!./**'
+    - ./bin/**
+
+resources:
+  Resources:
+    AnimalsTable: ${file(resources/AnimalsTable.yml):AnimalsTable}
+    AnimalsBucket: ${file(resources/AnimalsBucket.yml):AnimalsBucket}
+    AnimalsBucketPolicy: ${file(resources/AnimalsBucket.yml):AnimalsBucketPolicy}
+
+functions:
+  addAnimal:
+    handler: bin/upload
+    events:
+      - http:
+          method: PUT
+          path: /animal
+          cors: true
+          authorizer: ${self:custom.authorizer}
+  getAnimals:
+    handler: bin/findall
+    events:
+      - http:
+          method: GET
+          path: /animals
+          cors: true
+  getAnimal:
+    handler: bin/find
+    events:
+      - http:
+          method: GET
+          path: /animal
+          cors: true
+  updateAnimal:
+    handler: bin/update
+    events:
+      - http:
+          method: PATCH
+          path: /animal
+          cors: true
+          authorizer: ${self:custom.authorizer}
+  removeAnimal:
+    handler: bin/remove
+    events:
+      - http:
+          method: DELETE
+          path: /animal
+          cors: true
+          authorizer: ${self:custom.authorizer}
+
+custom:
+  authorizer: arn:aws:lambda:${self:provider.region}:${aws:accountId}:function:auth-service-${self:provider.stage}-auth
+  defaultRegion: eu-central-1
+  AnimalsTable:
+    name: !Ref AnimalsTable
+    arn: !GetAtt AnimalsTable.Arn
+  AnimalsBucket:
+    name: images-bucket-animals-${self:provider.stage}
