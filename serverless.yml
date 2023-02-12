@@ -1,5 +1,7 @@
 service: goserverlesscrud
 
+frameworkVersion: ^3.26.0
+
 provider:
   name: aws
   runtime: go1.x
@@ -9,6 +11,7 @@ provider:
     ANIMALS_TABLE_NAME: ${self:custom.AnimalsTable.name}
     ANIMALS_BUCKET_NAME: ${self:custom.AnimalsBucket.name}
     STAGE: ${self:provider.stage}
+    AWS_LAMBDA_API_GATEWAY_MAX_BODY_SIZE: 2097152
   iam:
     role:
       statements:
@@ -28,7 +31,7 @@ resources:
 
 functions:
   addAnimal:
-    handler: bin/upload
+    handler: bin/create
     events:
       - http:
           method: PUT
@@ -55,6 +58,14 @@ functions:
       - http:
           method: PATCH
           path: /animal
+          cors: true
+          authorizer: ${self:custom.authorizer}
+  uploadImage:
+    handler: bin/upload
+    events:
+      - http:
+          method: POST
+          path: /image
           cors: true
           authorizer: ${self:custom.authorizer}
   removeAnimal:

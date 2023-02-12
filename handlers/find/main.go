@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -17,9 +17,6 @@ import (
 type Response events.APIGatewayProxyResponse
 
 func find(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5000*time.Millisecond)
-	defer cancel()
-
 	id := event.QueryStringParameters["id"]
 
 	if id == "" {
@@ -38,11 +35,13 @@ func find(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIG
 	res, err := global.DB.GetItemWithContext(ctx, input)
 
 	if err != nil {
+		fmt.Println(err)
 		return global.ErrResponse(http.StatusInternalServerError, "failed to get animal results from db"), nil
 	}
 
 	err = dynamodbattribute.UnmarshalMap(res.Item, &animal)
 	if err != nil {
+		fmt.Println(err)
 		return global.ErrResponse(http.StatusInternalServerError, "failed to unmarshal animal result from db"), nil
 	}
 

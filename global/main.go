@@ -15,33 +15,46 @@ type AnimalsResults struct {
 	Next    string   `json:"next"`
 }
 
+type UploadImageRequest struct {
+	Id     string `json:"id"`
+	Base64 string `json:"base64"`
+}
+
 type Animal struct {
-	Id          string   `json:"id" dynamodbav:"id"`
-	Name        string   `json:"name" dynamodbav:"name"`
-	Description string   `json:"description" dynamodbav:"description"`
-	Status      bool     `json:"status" dynamodbav:"status"`
-	Images      []string `json:"images" dynamodbav:"images"`
+	Id          string `json:"id" dynamodbav:"id"`
+	Name        string `json:"name" dynamodbav:"name"`
+	Description string `json:"description" dynamodbav:"description"`
+	Status      bool   `json:"status" dynamodbav:"status"`
+	Avatar      string `json:"avatar" dynamodbav:"avatar"`
+	Breed       string `json:"breed" dynamodbav:"breed"`
+	Birth       int64  `json:"birth" dynamodbav:"birth"`
 }
 
 type AnimalUpdate struct {
-	Id          string   `json:":id" dynamodbav:":id,omitempty"`
-	Name        string   `json:":name" dynamodbav:":name,omitempty"`
-	Description string   `json:":description" dynamodbav:":description,omitempty"`
-	Status      bool     `json:":status" dynamodbav:":status,omitempty"`
-	Images      []string `json:":images" dynamodbav:":images,omitempty"`
+	Name        string `json:":name" dynamodbav:":name,omitempty"`
+	Description string `json:":description" dynamodbav:":description,omitempty"`
+	Status      bool   `json:":status" dynamodbav:":status"`
+	Avatar      string `json:":avatar" dynamodbav:":avatar,omitempty"`
+	Breed       string `json:":breed" dynamodbav:":breed,omitempty"`
+	Birth       int64  `json:":birth" dynamodbav:":birth,omitempty"`
+}
+
+type SimpleResponse struct {
+	Response string `json:"response"`
 }
 
 var TableName string
 
 var DB dynamodb.DynamoDB
+var Session *session.Session
 
 func init() {
 	TableName = os.Getenv("ANIMALS_TABLE_NAME")
-	session := session.Must(session.NewSessionWithOptions(session.Options{
+	Session = session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	DB = *dynamodb.New(session)
+	DB = *dynamodb.New(Session)
 }
 
 func Response(code int, object interface{}) events.APIGatewayProxyResponse {
@@ -53,7 +66,9 @@ func Response(code int, object interface{}) events.APIGatewayProxyResponse {
 	return events.APIGatewayProxyResponse{
 		StatusCode: code,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
+			"Content-Type":                     "application/json",
+			"Access-Control-Allow-Origin":      "http://localhost:5173",
+			"Access-Control-Allow-Credentials": "true",
 		},
 		Body:            string(marshalled),
 		IsBase64Encoded: false,
@@ -70,7 +85,9 @@ func ErrResponse(status int, body string) events.APIGatewayProxyResponse {
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
+			"Content-Type":                     "application/json",
+			"Access-Control-Allow-Origin":      "http://localhost:5173",
+			"Access-Control-Allow-Credentials": "true",
 		},
 		Body: string(messageBytes),
 	}

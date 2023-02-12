@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -20,9 +19,6 @@ import (
 type Response events.APIGatewayProxyResponse
 
 func update(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5000*time.Millisecond)
-	defer cancel()
-
 	id := event.QueryStringParameters["id"]
 
 	if id == "" {
@@ -36,12 +32,13 @@ func update(ctx context.Context, event events.APIGatewayProxyRequest) (events.AP
 	animal := global.Animal{}
 
 	if err := json.Unmarshal([]byte(event.Body), &animal); err != nil {
+		fmt.Println(err)
 		return global.ErrResponse(http.StatusBadRequest, "failed to parse request body"), nil
 	}
 
 	_, err := dynamodbattribute.MarshalMap(&animal)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return global.ErrResponse(http.StatusInternalServerError, "unable to marshal animal data"), nil
 	}
 
@@ -53,11 +50,29 @@ func update(ctx context.Context, event events.APIGatewayProxyRequest) (events.AP
 	if animal.Description != "" {
 		updateExpressions = append(updateExpressions, "description=:description")
 	}
-	if len(animal.Images) > 0 {
-		updateExpressions = append(updateExpressions, "images=:images")
+	if animal.Avatar != "" {
+		updateExpressions = append(updateExpressions, "avatar=:avatar")
+	}
+	if animal.Breed != "" {
+		updateExpressions = append(updateExpressions, "breed=:breed")
+	}
+	if animal.Birth != 0 {
+		updateExpressions = append(updateExpressions, "birth=:birth")
 	}
 
-	updateData, err := dynamodbattribute.MarshalMap(global.AnimalUpdate(animal))
+	updateData, err := dynamodbattribute.MarshalMap(global.AnimalUpdate{
+		Name:        animal.Name,
+		Breed:       animal.Breed,
+		Description: animal.Description,
+		Status:      animal.Status,
+		Avatar:      animal.Avatar,
+		Birth:       animal.Birth,
+	})
+
+	if err != nil {
+		fmt.Println(err)
+		return global.ErrResponse(http.StatusInternalServerError, "failed to update animal results from db"), nil
+	}
 
 	input := &dynamodb.UpdateItemInput{
 		TableName: aws.String(global.TableName),
@@ -76,11 +91,11 @@ func update(ctx context.Context, event events.APIGatewayProxyRequest) (events.AP
 	_, err = global.DB.UpdateItemWithContext(ctx, input)
 
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return global.ErrResponse(http.StatusInternalServerError, "failed to update animal results from db"), nil
 	}
 
-	return global.Response(http.StatusOK, "successfully updated"), nil
+	return global.Response(http.StatusOK, global.SimpleResponse{Response: "successfully updated"}), nil
 }
 
 func main() {

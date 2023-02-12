@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -16,9 +16,6 @@ import (
 type Response events.APIGatewayProxyResponse
 
 func remove(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5000*time.Millisecond)
-	defer cancel()
-
 	id := event.QueryStringParameters["id"]
 
 	if id == "" {
@@ -35,10 +32,11 @@ func remove(ctx context.Context, event events.APIGatewayProxyRequest) (events.AP
 	_, err := global.DB.DeleteItemWithContext(ctx, input)
 
 	if err != nil {
+		fmt.Println(err)
 		return global.ErrResponse(http.StatusInternalServerError, "failed to remove animal results from db"), nil
 	}
 
-	return global.Response(http.StatusOK, "successfully removed"), nil
+	return global.Response(http.StatusOK, global.SimpleResponse{Response: "successfully removed"}), nil
 }
 
 func main() {

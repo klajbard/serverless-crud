@@ -17,7 +17,7 @@ curl 'https://@functionid.execute-api.eu-central-1.amazonaws.com/dev/animals' \
 curl -X PUT 'https://@functionid.execute-api.eu-central-1.amazonaws.com/dev/animal' \
   -H 'authorization: Bearer @auth-token' \
   -H 'content-type: application/json;charset=UTF-8' \
-  --data-raw '{"id":"004","name":"Fickó","description":"Nagyon csibész kutyus","images":["image1.png","image2.png"]}'
+  --data-raw '{"name":"Fickó","description":"Nagyon csibész kutyus","status":true,"breed":"Keverék","birth":1676211491}'
 ```
 
 ### Get
